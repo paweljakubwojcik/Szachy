@@ -1,0 +1,1091 @@
+<!DOCTYPE HTML>
+
+<html lang="pl">
+
+<head>
+ <meta charset="utf-8" />
+ <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+ <title>szachy</title>
+ <meta name="description" content=""/>
+ <meta name="keywords" content="muzyka, band, koncerty" />
+ <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	<link rel="stylesheet" href="szachy.css" type="text/css"/>
+	
+	
+	<script>
+		var W2="<i class=\"glyphicon glyphicon-tower\" style=\"color:#000000;\"></i>";
+		var G2="<i class=\"glyphicon glyphicon-bishop\" style=\"color:#000000;\"></i>";
+		var S2="<i class=\"glyphicon glyphicon-knight\" style=\"color:#000000;\"></i>";
+		var K2="<i class=\"glyphicon glyphicon-king\" style=\"color:#000000;\"></i>";
+		var k2="<i class=\"glyphicon glyphicon-queen\" style=\"color:#000000;\"></i>";
+		var P2="<i class=\"glyphicon glyphicon-pawn\" style=\"color:#000000;\"></i>";
+		var W1="<i class=\"glyphicon glyphicon-tower\" style=\"color:#ffffff;\"></i>";
+		var G1="<i class=\"glyphicon glyphicon-bishop\" style=\"color:#ffffff;\"></i>";
+		var S1="<i class=\"glyphicon glyphicon-knight\" style=\"color:#ffffff;\"></i>";
+		var K1="<i class=\"glyphicon glyphicon-king\" style=\"color:#ffffff;\"></i>";
+		var k1="<i class=\"glyphicon glyphicon-queen\" style=\"color:#ffffff;\"></i>";
+		var P1="<i class=\"glyphicon glyphicon-pawn\" style=\"color:#ffffff;\"></i>";
+
+		var tab=[[W2,G2,S2,K2,k2,S2,G2,W2],
+				 [P2,P2,P2,P2,P2,P2,P2,P2],
+				 [" "," "," "," "," "," "," "," "],
+				 [" "," "," "," "," "," "," "," "],
+				 [" "," "," "," "," "," "," "," "],
+				 [" "," "," "," "," "," "," "," "],
+				 [P1,P1,P1,P1,P1,P1,P1,P1],
+				 [W1,G1,S1,K1,k1,S1,G1,W1]]
+		
+		var history=[[[]]];
+		var poley=[8,7,6,5,4,3,2,1];
+		var polex=["a","b","c","d","e","f","g","h"];
+		var log=[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "];
+		var tura=1;
+		 
+		function addToLog(x,y,a,b,id, dd)
+		{
+			
+			var what_to_log;
+			var dead,check,buffor;
+			if(dd==true) dead=" hit: "+tab[a][b]; else dead=" ";
+			buffor=tab[a][b];
+			//tab[x][y]=" ";
+			//tab[a][b]=id;
+			if(checkIfCheck()!=0) check=" check"; else check=" ";
+			figure=id;
+			for(i=0;i<10;i++)
+			{	
+				
+				log[i]=log[i+1];
+				document.getElementById("log"+i).innerHTML=log[i];
+			}
+			if(checkIfMate()==0) log[10]=figure+" from "+polex[y]+poley[x]+" to "+polex[b]+poley[a]+dead+check+"</br>";
+			else log[10]=figure+" from "+polex[y]+poley[x]+" to "+polex[b]+poley[a]+dead+check+"</br>"+" check mate game over";
+			
+			document.getElementById("log10").innerHTML=log[10];
+			
+			//tab[a][b]=buffor; tab[x][y]=id;
+		}
+		
+		function changeTurn()
+		{
+			if(tura==1) 
+			{
+			tura=2;
+			document.getElementById("tura1").innerHTML=" ";
+			document.getElementById("tura2").innerHTML="<i class=\"glyphicon glyphicon-hand-left\"></i>";
+			}
+			else 
+			{
+			tura=1;
+			document.getElementById("tura1").innerHTML="<i class=\"glyphicon glyphicon-hand-left\"></i>";
+			document.getElementById("tura2").innerHTML=" ";
+			}
+			
+		}
+		
+		function isMyTurn(i,j)
+		{
+			var on=" ";
+			
+			switch(tura)
+			{
+				case 1:
+				var t=tab[i][j];
+				if(t==W1||t==S1||t==G1||t==K1||t==P1||t==k1) on="onclick=\"movefrom("+i+","+j+")\"";
+				break;
+			
+				case 2:
+				var t=tab[i][j];
+				if(t==W2||t==S2||t==G2||t==K2||t==k2||t==P2) on="onclick=\"movefrom("+i+","+j+")\"";
+				break;
+			}
+			//on="onclick=\"movefrom("+i+","+j+")\"";
+			return on;
+		}
+		
+		function can_i_save_the_king(i,j)
+		{
+			var id=tab[i][j],x,y,buffor;
+			var moves=possibleMoves(id,i,j);
+			var mlen=moves.length;
+			var save=0;
+			for(var l=0;l<mlen;l++)
+			{
+				x=moves[l][0];
+				y=moves[l][1];
+				buffor=tab[x][y];
+				tab[x][y]=id;
+				tab[i][j]=" ";
+				if(checkIfCheck()==0) save=1;
+				tab[i][j]=id;
+				tab[x][y]=buffor;
+				
+			}
+			
+			return save;
+		
+		}
+		
+		function do_i_make_things_worse(i,j,x,y) //zwraca jeśli ruch jest nie dozwolony
+		{
+			var id=tab[x][y],buffor=tab[i][j];
+			var bad=0;
+			tab[i][j]=id;
+			tab[x][y]=" ";
+			if(checkIfCheck()==1&&tura==1) bad=1;
+			if(checkIfCheck()==2&&tura==2) bad=1;
+			tab[i][j]=buffor;
+			tab[x][y]=id;
+			return bad;
+		}
+		
+		function draw()//rysuje szachownice
+		{
+			var text=" ";
+			var w="background-color:#aaaaaa;", b="background-color:#444444;", cursor;
+			var color=b; //kolor
+			var on=" "; //zawiera instrukcje onclick
+			
+			text=text+"<div class=\"littletile3\" ></div> </div>";
+			
+			for(var i=0;i<8;i++) //kafelki z a,b,c...
+			{
+				text=text+"<div class=\"littletile2\" >"+polex[i]+"</div> </div>";
+			}
+			text=text+"<div class=\"littletile3\" ></div> </div>";
+			text=text+"<div style=\"clear:both;\"> </div>";
+			
+			for(var i=0;i<8;i++) //rysowanie właściwej szachownicy
+			{
+				text=text+"<div class=\"littletile1\" >"+poley[i]+"</div> </div>"; //kafelki z 1,2,3...
+				for(var j=0;j<8;j++)
+				{
+					if(checkIfCheck()==0)
+					{
+					 on=isMyTurn(i,j);//jeśli tura się zgadza to zawiera onclick
+					 if(isMyTurn(i,j)!=" ") cursor="cursor:pointer; "; else cursor="cursor:default; ";
+					 }
+					else
+					{
+						if(isMyTurn(i,j)!=" ")
+						{
+							if(can_i_save_the_king(i,j)!=0) 
+							{	
+							cursor="cursor:pointer; border-color:#3fba3b; "; //zielony
+							on=isMyTurn(i,j);
+							
+							} //doda onclick tylko gdy figura może uratować króla i podświetli te figury
+							else {on=" ";cursor="cursor:default; ";}
+						}
+						else {on=" ";cursor="cursor:default; ";}
+					
+					}
+					
+					text=text+"<div class=\"tile\" id=\"tile"+i+j+"\""+on+" style=\" "+cursor+color+"\">"+tab[i][j]+"</div> </div>";
+					
+					if(color==b) color=w; else color=b;//zmiana koloru
+				}
+				text=text+"<div class=\"littletile1\" >"+poley[i]+"</div> </div>"; //kafelki z 1,2,3..
+				text=text+"<div style=\"clear:both;\"> </div>";
+				if(color==b) color=w; else color=b;//zmiana koloru
+			}
+			
+			text=text+"<div class=\"littletile3\" ></div> </div>";
+			for(var i=0;i<8;i++)//kafelki z a,b,c...
+			{
+				text=text+"<div class=\"littletile2\" >"+polex[i]+"</div> </div>";
+			}
+			
+			text=text+"<div class=\"littletile3\" ></div> </div>";
+			text=text+"<div style=\"clear:both;\"> </div>";
+		
+		document.getElementById("square").innerHTML=text;
+		}
+		
+		
+		function search(id)
+		{
+			var i,j;
+			var ret=[];
+			var len;
+			for(i=0;i<8;i++)
+			{
+				for(j=0;j<8;j++)
+				if(tab[i][j]==id) 
+				{
+					len=ret.length;
+					ret[len]=[i,j];
+				}
+			}
+			return ret;
+		}
+		
+		
+		function possibleMoves(id,x,y)
+		{
+			var moves=[];
+			var len=moves.length;
+			var t;
+			switch(id)
+			{
+			case W1:
+				for(var i=1;i<8;i++) //kolumna wdół
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //kolumnad góry
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++) //wiersz w prawo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //wiersz w lewo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				break;
+				
+			case W2:
+				for(var i=1;i<8;i++) //kolumna wdół
+				{
+					if(x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //kolumnad góry
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++) //wiersz w prawo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //wiersz w lewo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				break;
+			
+			case P1:
+				for(var i=1;i<3;i++)
+				{
+					if(x-i>=0&&x-i<8)
+					{
+						if(tab[x-i][y]==" ")
+						{
+						len=moves.length; 
+						moves[len]=[x-i,y];
+						}
+						else break;
+					}
+				}
+				t=tab[x-1][y-1];
+				if(y-1>=0&&x-1>=0){if(t!=" ")
+				{if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x-1,y-1];}}}
+				t=tab[x-1][y+1];
+				if(x-1>=0&&y+1<8){if(t!=" ")
+				{if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2){len=moves.length; moves[len]=[x-1,y+1];}}}
+				break;
+			
+			case P2:
+				for(var i=-1;i>-3;i--)
+				{
+					if(x-i>=0&&x-i<8)
+					{
+						if(tab[x-i][y]==" ")
+						{
+						len=moves.length; 
+						moves[len]=[x-i,y];
+						}
+						else break;
+					}
+				}
+				t=tab[x+1][y-1];
+				if(y-1>=0&&x-1>=0){if(t!=" ")
+				{if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+1,y-1];}}}
+				t=tab[x+1][y+1];
+				if(x-1>=0&&y+1<8){if(t!=" ")
+				{if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1){len=moves.length; moves[len]=[x+1,y+1];}}}
+				break;
+			
+			case G1:
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y+i<8)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y+i>=0)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y-i>=0)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y-i>=0)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				} break;
+			
+			case G2:
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y+i<8)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y+i>=0)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y-i>=0)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y-i>=0)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				} break;
+				
+			case S1:
+				var i=-2,j=-1; 
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) 
+					{
+						len=moves.length; moves[len]=[x+i,y+j];
+					}
+				}
+				i=-2; j=1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) 
+					{
+						len=moves.length; moves[len]=[x+i,y+j];
+					}
+				}
+				i=2;j=-1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) 
+					{
+						len=moves.length; moves[len]=[x+i,y+j];
+					}
+				}
+				i=2;j=1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) 
+					{
+						len=moves.length; moves[len]=[x+i,y+j];
+					}
+				}
+				i=1;j=2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) 
+					{
+						len=moves.length; moves[len]=[x+i,y+j];
+					}
+				}
+				i=1;j=-2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8){if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) {len=moves.length; moves[len]=[x+i,y+j];}}
+				i=-1;j=2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8){if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) {len=moves.length; moves[len]=[x+i,y+j];}}
+				i=-1;j=-2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8){if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S2||tab[x+i][y+j]==W2||tab[x+i][y+j]==G2||tab[x+i][y+j]==P2||tab[x+i][y+j]==k2||tab[x+i][y+j]==K2) {len=moves.length; moves[len]=[x+i,y+j];}}
+				break;
+				
+			case S2:
+				var i=-2,j=-1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1) 
+					{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				i=-2; j=1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1) 
+					{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				i=2;j=-1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1) 
+						{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				i=2;j=1;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1) 
+					{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				i=1;j=2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+					{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1)
+						{len=moves.length; moves[len]=[x+i,y+j];}
+					}
+				i=1;j=-2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1) 
+						{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				i=-1;j=2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1) 
+						{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				i=-1;j=-2;
+				if(x+i>=0&&x+i<8&&y+j>=0&&y+j<8)
+				{
+					if(tab[x+i][y+j]==" "||tab[x+i][y+j]==S1||tab[x+i][y+j]==W1||tab[x+i][y+j]==G1||tab[x+i][y+j]==P1||tab[x+i][y+j]==k1||tab[x+i][y+j]==K1)
+						{len=moves.length; moves[len]=[x+i,y+j];}
+				}
+				break;
+			
+			case k1:
+				for(var i=1;i<8;i++) //kolumna wdół
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //kolumnad góry
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++) //wiersz w prawo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //wiersz w lewo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y+i<8)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y+i>=0)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y-i>=0)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y-i<8)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				} break;
+				
+			case k2:
+				for(var i=1;i<8;i++) //kolumna wdół
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //kolumnad góry
+				{
+					if(x+i>=0&&x+i<8)
+					{
+						t=tab[x+i][y];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++) //wiersz w prawo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--) //wiersz w lewo
+				{
+					if(y+i>=0&&y+i<8)
+					{
+						t=tab[x][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y+i<8)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y+i>=0)
+					{
+						t=tab[x+i][y+i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y+i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y+i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=1;i<8;i++)
+				{
+					if(x+i<8&&y-i>=0)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				}
+				for(var i=-1;i>-8;i--)
+				{
+					if(x+i>=0&&y-i<8)
+					{
+						t=tab[x+i][y-i];
+						if(t==" ") {len=moves.length; moves[len]=[x+i,y-i];}
+						else
+						if(t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) {len=moves.length; moves[len]=[x+i,y-i]; break; }
+						else break;
+					}
+					
+				} break;
+				
+			case K1:
+				for(var i=-1;i<2;i++)
+				{
+					for(var j=-1;j<2;j++)
+					{
+						if(x+i<8&&x+i>=0&&y+j<8&&y+j>=0)
+						{
+							t=tab[x+i][y+j];
+							if(t==" "||t==W2||t==S2||t==G2||t==P2||t==k2||t==K2) 
+							{
+						
+								if(check(x+i,y+j,1)!=1)
+								{
+								len=moves.length; moves[len]=[x+i,y+j];
+								}
+							}
+						
+						}
+					}
+				}
+				break;
+			
+			case K2:
+				for(var i=-1;i<2;i++)
+				{
+					for(var j=-1;j<2;j++)
+					{
+						if(x+i<8&&x+i>=0&&y+j<8&&y+j>=0)
+						{
+							t=tab[x+i][y+j];
+							if(t==" "||t==W1||t==S1||t==G1||t==P1||t==k1||t==K1) 
+							{
+								if(check(x+i,y+j,2)!=1)//co jest nie tak z tą pętlą ? 
+								{
+								len=moves.length; moves[len]=[x+i,y+j];
+								}
+							}
+						
+						}
+					}
+				}
+				break;	
+			}
+			
+			
+			return moves;
+		}
+		
+		function check(x,y,wichKing) //sprawdza czy któraś z figur celuje w króla na pozycji x y
+		{
+			var buffor=tab[x][y];
+			var pos,whatToSearch, poskrula;
+			var moves;
+			var mlen,plen;
+			var atkx,atky,posKx,posKy;
+			var fig=[];
+			var ilemoznatychzmiennych=wichKing;
+			if(ilemoznatychzmiennych==1) {fig=[W2,G2,S2,P2,k2]; tab[x][y]=K1;}
+			if(ilemoznatychzmiennych==2) {fig=[W1,G1,S1,P1,k1]; tab[x][y]=K2;}
+			for(var licznik=0;licznik<5;licznik++)
+			{
+				whatToSearch=fig[licznik];
+				pos=search(whatToSearch); 
+				plen=pos.length;
+				
+				for(j=0;j<plen;j++)
+				{	
+					atkx=pos[j][0]; // współrzędna x atakującego
+					atky=pos[j][1]; // współrzędna y atakującego
+					moves=possibleMoves(whatToSearch,atkx,atky); //możliwe ruchy atakującego 
+					mlen=moves.length; //ilość możliwych ruchów
+					for(var i=0;i<mlen;i++)
+					{
+						if(moves[i][0]==x&&moves[i][1]==y) {tab[x][y]=buffor; return 1; }
+					}
+				}
+				
+			}
+			tab[x][y]=buffor;
+			return 0;
+		}
+		
+		function checkIfCheck() //zwraca 1 jeśli szach jest na 1, 2 jeśli szach jest na 2
+		{
+			
+			var poskrula;
+			var posKx,posKy;
+			
+			switch(tura)
+			{
+			case 2:
+			poskrula=search(K2);
+			posKx=poskrula[0][0];
+			posKy=poskrula[0][1];
+			if(check(posKx,posKy,2)==1) return 2;	
+			
+			poskrula=search(K1);
+			posKx=poskrula[0][0];
+			posKy=poskrula[0][1];
+			if(check(posKx,posKy,1)==1) return 1;
+			break;
+			
+			case 1:
+			poskrula=search(K1);
+			posKx=poskrula[0][0];
+			posKy=poskrula[0][1];
+			if(check(posKx,posKy,1)==1) return 1;
+			
+			poskrula=search(K2);
+			posKx=poskrula[0][0];
+			posKy=poskrula[0][1];
+			if(check(posKx,posKy,2)==1) return 2;	
+			break;
+			}
+			
+			
+			return 0;
+		
+		
+		}
+		
+		function checkIfMate()
+		{
+			var s=checkIfCheck();
+			var fig=[];
+			var can=0;
+			switch(s)
+			{
+			case 0: return 0; break;
+			case 1: fig=[W1,G1,S1,K1,k1,P1]; break;
+			case 2: fig=[W2,G2,S2,K2,k2,P2]; break;
+			}
+			for(var i=0;i<6;i++)
+			{
+				var whatToSearch=fig[i];
+				pos=search(whatToSearch);
+				var len=pos.length;
+				//document.getElementById("test").innerHTML=len;
+				for(var j=0;j<len;j++)
+				{	
+					var x=pos[j][0];
+					var y=pos[j][1];
+					if(can_i_save_the_king(x,y)!=0) return 0;
+				}
+			}
+			document.getElementById("test").innerHTML='Koniec Gry';
+			return 1;
+		
+		}
+		
+		
+	
+		function movefrom(x,y)
+		{
+			draw();
+			var id=tab[x][y];
+			var moves=possibleMoves(id,x,y);
+			var len=moves.length;
+			var kafelek;
+				for(var i=0;i<len;i++)
+				{
+					if(do_i_make_things_worse(moves[i][0],moves[i][1],x,y)==0)
+					{
+					kafelek=document.getElementById("tile"+moves[i][0]+moves[i][1])
+					kafelek.style.borderColor="#af1507";//red
+					kafelek.style.cursor="pointer";
+					if(i==0) kafelek.addEventListener("click", function(){moveTo(id,0,x,y);});
+					if(i==1) kafelek.addEventListener("click", function(){moveTo(id,1,x,y);});
+					if(i==2) kafelek.addEventListener("click", function(){moveTo(id,2,x,y);});
+					if(i==3) kafelek.addEventListener("click", function(){moveTo(id,3,x,y);});
+					if(i==4) kafelek.addEventListener("click", function(){moveTo(id,4,x,y);});
+					if(i==5) kafelek.addEventListener("click", function(){moveTo(id,5,x,y);});
+					if(i==6) kafelek.addEventListener("click", function(){moveTo(id,6,x,y);});
+					if(i==7) kafelek.addEventListener("click", function(){moveTo(id,7,x,y);});
+					if(i==8) kafelek.addEventListener("click", function(){moveTo(id,8,x,y);});
+					if(i==9) kafelek.addEventListener("click", function(){moveTo(id,9,x,y);});
+					if(i==10) kafelek.addEventListener("click", function(){moveTo(id,10,x,y);});
+					if(i==11) kafelek.addEventListener("click", function(){moveTo(id,11,x,y);});
+					if(i==12) kafelek.addEventListener("click", function(){moveTo(id,12,x,y);});
+					if(i==13) kafelek.addEventListener("click", function(){moveTo(id,13,x,y);});
+					if(i==14) kafelek.addEventListener("click", function(){moveTo(id,14,x,y);});
+					if(i==15) kafelek.addEventListener("click", function(){moveTo(id,15,x,y);});
+					if(i==16) kafelek.addEventListener("click", function(){moveTo(id,16,x,y);});
+					if(i==17) kafelek.addEventListener("click", function(){moveTo(id,17,x,y);});
+					if(i==18) kafelek.addEventListener("click", function(){moveTo(id,18,x,y);});
+					if(i==19) kafelek.addEventListener("click", function(){moveTo(id,19,x,y);});
+					if(i==20) kafelek.addEventListener("click", function(){moveTo(id,20,x,y);});
+					if(i==21) kafelek.addEventListener("click", function(){moveTo(id,21,x,y);});
+					if(i==22) kafelek.addEventListener("click", function(){moveTo(id,22,x,y);});
+					if(i==23) kafelek.addEventListener("click", function(){moveTo(id,23,x,y);});
+					if(i==24) kafelek.addEventListener("click", function(){moveTo(id,24,x,y);});
+					if(i==25) kafelek.addEventListener("click", function(){moveTo(id,25,x,y);});
+					if(i==26) kafelek.addEventListener("click", function(){moveTo(id,26,x,y);});
+					if(i==27) kafelek.addEventListener("click", function(){moveTo(id,27,x,y);});
+					}
+				}
+			
+			change_color_if_check();
+					
+		}
+
+		function moveTo(id,i,x,y)
+		{
+			var moves=possibleMoves(id,x,y);
+			var dead = false;
+			a=moves[i][0];
+			b=moves[i][1];
+			
+			if(tab[a][b]!=" ") dead = true;
+			else dead = false;
+			
+			tab[x][y]=" ";
+			tab[a][b]=id;
+			changeTurn();
+			checkIfMate();
+			draw();
+			change_color_if_check();
+			
+			addToLog(x,y,a,b,id, dead);
+			storeHistory();
+		}
+		
+		function change_color_if_check()
+		{
+			if(checkIfCheck()!=0)
+			{ 
+				if(checkIfCheck()==2) var king=search(K2);
+				if(checkIfCheck()==1) var king=search(K1);
+				document.getElementById("tile"+king[0][0]+king[0][1]).style.backgroundColor="#e2635d";
+			}
+		}
+		
+		
+		function storeHistory()
+		{
+			var l=history.length;
+			document.getElementById("test").innerHTML=l;
+			for(var i=0;i<7;i++)
+			{
+				for(var j=0;j<7;j++)
+				{
+					history[i][j][l]=tab[i][j];
+				}
+			}
+		}
+
+
+	</script>
+	
+	
+	
+</head>
+	
+	
+	
+<body onload="draw()">
+	<div id="container" >
+		<div class="rectangle"> <div id="nazwa">SZACHY</div> </div>
+		
+		<div id="log"> 
+		<div class="partlog" id="log0"> </div>
+		<div class="partlog" id="log1"> </div>
+		<div class="partlog" id="log2"> </div>
+		<div class="partlog" id="log3"> </div>
+		<div class="partlog" id="log4"> </div>
+		<div class="partlog" id="log5"> </div>
+		<div class="partlog" id="log6"> </div>
+		<div class="partlog" id="log7"> </div>
+		<div class="partlog" id="log8"> </div>
+		<div class="partlog" id="log9"> </div>
+		<div class="partlog" id="log10"> </div>
+		<div class="partlog" id="log11"> </div>
+		<div class="partlog" id="log12"> </div>
+		<div class="partlog" id="log13"> </div>
+		<div class="partlog" id="log14"> </div>
+		<div class="partlog" id="log15"> </div>
+		<div class="partlog" id="log16"> </div>
+		<div class="partlog" id="log17"> </div>
+		<div class="partlog" id="log18"> </div>
+		<div class="partlog" id="log19"> </div>
+		<div class="partlog" id="log20"> </div>
+		<div class="partlog" id="log21"> </div>
+		<div class="partlog" id="log22"> </div>
+		<div class="partlog" id="log23"> </div>
+		<div class="partlog" id="log24"> </div>
+		<div class="partlog" id="log25"> </div>
+		</div>
+		<div id="square"> </div>
+		<div id="panel"> 
+		<div class="smallpanel" id="panel1"> </div> 
+		<div class="smallpanel" id="panel2"> </div> 
+		<div class="smallpanel" id="panel3"> 
+			<div id="tura"> 
+			<div class="turnPointer"> <i class="glyphicon glyphicon-king" style="color:#ffffff;"></i></div> 
+			<div class="turnPointer" id="tura1"> <i class="glyphicon glyphicon-hand-left"></i> </div> 
+			<div style="clear:both;"> </div>
+			<div class="turnPointer"><i class="glyphicon glyphicon-king" style="color:#000000;"></i> </div> 
+			<div class="turnPointer" id="tura2"> </div>
+			<div style="clear:both;"> </div>
+			</div>
+			
+		</div> 
+		<div class="smallpanel" id="panel4"> 
+		</div> 
+		<div class="smallpanel" id="panel5"> </div> 
+		
+		
+		</div>
+		<div style="clear:both"> </div>
+		
+		<div class="rectangle">
+		<div id="test"> test </div>
+		
+		2018 Kółko i Krzyżyk by &copy; Paweł Wójcik <i class="icon-mail"></i> pawel.jakub.wojcik@gmail.com</div>
+
+
+
+
+	</div>
+</body>
+</html>

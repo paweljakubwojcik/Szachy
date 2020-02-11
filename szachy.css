@@ -1,0 +1,144 @@
+body
+{
+	background-image:url("starwars.png");
+	background-attachment:fixed;
+	color:#ffffff;
+	font-family: 'Lato', sans-serif;
+}
+
+#container
+{
+	width:1000px;
+margin-left:auto;
+margin-right:auto;	
+}
+.rectangle
+{
+	width:1000px;
+	padding:20px;	
+	heigh:100px;
+	text-align:center;
+	background-color:#111111;
+	opacity:0.6;
+}
+
+
+#nazwa
+{
+	
+	font-family: 'Josefin Sans', sans-serif;
+	font-size: 70px;
+	text-align:center;
+}
+#square
+{
+	width:592px;
+	height:592px;
+	margin:auto;
+	 float:left;
+	}
+
+
+#log
+{
+width:200px;
+height:592px;	
+ float:left;
+ margin-right:4px;
+ /*background-color:#111111;*/
+	opacity:1;
+	font-size:15px;
+	cursor:default;
+ 
+}
+.partlog
+{
+width:200px;
+height:4%;	
+	
+}
+#panel
+{
+width:200px;
+height:592px;	
+ float:left;
+ margin-left:4px;
+ /*background-color:#111111;*/
+	
+	
+ 
+}
+.smallpanel
+{
+	height:110px;
+	border-bottom-style:solid;
+ border-color:#ffffff;
+ border-width:1px;
+ cursor:default;
+ 
+	
+}
+.tile
+{
+padding:6px;
+width:68px; 
+height:68px;
+ float:left;
+ opacity:0.9;
+ text-align:center;
+ font-size:40px;
+ border-style:solid;
+ border-color:#222222;
+ border-width:2px;
+ 
+}
+.littletile1
+{
+	width:20px; 
+height:68px;
+padding-top:20px;
+ float:left;
+ cursor:default;
+ margin-left:2px;
+ margin-right:2px;
+ text-align:center;
+ font-size:15px;
+ background-color:#111111;
+ opacity:0.4;
+}
+.littletile2
+{
+	width:68px; 
+height:20px;
+ float:left;
+ margin-top:2px;
+ margin-bottom:2px;
+ cursor:default;
+ text-align:center;
+ font-size:15px;
+ background-color:#111111;
+ opacity:0.4;
+}
+
+.littletile3
+{
+width:20px; 
+height:20px;
+ float:left;
+ margin:2px;
+ background-color:#111111;
+ opacity:0;
+}
+
+.turnPointer
+{
+	font-size:30px;
+	text-align:center;
+	height:50%;
+	width:50%;
+	padding:3%;
+	float:left;
+	color:#555555;
+}
+
+
